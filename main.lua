@@ -1,34 +1,52 @@
--- ==========================================
--- INTERFAZ GRÁFICA (GUI) PARA ARCEUS X NEO
--- ==========================================
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
 local Title = Instance.new("TextLabel")
 local PlayerInput = Instance.new("TextBox")
 local Grid = Instance.new("UIGridLayout")
 local ButtonFrame = Instance.new("Frame")
+local ToggleButton = Instance.new("TextButton")
 
 ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
+
+ToggleButton.Parent = ScreenGui
+ToggleButton.Size = UDim2.new(0, 60, 0, 60)
+ToggleButton.Position = UDim2.new(0.05, 0, 0.4, 0)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
+ToggleButton.Text = "MENU"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.Font = Enum.Font.SourceSansBold
+ToggleButton.TextSize = 14
+ToggleButton.Active = true
+ToggleButton.Draggable = true
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 30)
+corner.Parent = ToggleButton
 
 MainFrame.Name = "AdminMenuDB"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 MainFrame.Position = UDim2.new(0.3, 0, 0.2, 0)
 MainFrame.Size = UDim2.new(0, 350, 0, 400)
+MainFrame.Visible = false
 MainFrame.Active = true
 MainFrame.Draggable = true
+
+ToggleButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
 
 Title.Parent = MainFrame
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-Title.Text = "PROYECTO 17 - DB ADMIN"
+Title.Text = "PROYECTO 17"
 Title.TextColor3 = Color3.fromRGB(255, 140, 0)
 Title.TextSize = 18
 Title.Font = Enum.Font.SourceSansBold
 
 PlayerInput.Parent = MainFrame
-PlayerInput.PlaceholderText = "Nombre del jugador objetivo..."
+PlayerInput.PlaceholderText = "Player Name..."
 PlayerInput.Size = UDim2.new(0.9, 0, 0, 35)
 PlayerInput.Position = UDim2.new(0.05, 0, 0.12, 0)
 PlayerInput.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
@@ -45,7 +63,6 @@ Grid.Parent = ButtonFrame
 Grid.CellSize = UDim2.new(0, 150, 0, 40)
 Grid.CellPadding = UDim2.new(0, 10, 0, 10)
 
--- Función para buscar jugador objetivo por nombre corto
 local function getTargetPlayer()
     local text = PlayerInput.Text:lower()
     if text == "" then return nil end
@@ -57,7 +74,6 @@ local function getTargetPlayer()
     return nil
 end
 
--- Creador automático de botones
 local function createButton(name, color, callback)
     local btn = Instance.new("TextButton")
     btn.Parent = ButtonFrame
@@ -73,32 +89,32 @@ local function createButton(name, color, callback)
     end)
 end
 
--- ==========================================
---        LÓGICA CON TUS REMOTOS DEL DEX
--- ==========================================
-local BindableEvents = game:GetService("ReplicatedStorage"):WaitForChild("_BindableEvents")
-local FznRemote = BindableEvents:WaitForChild("Fzn")
-local DamageRemote = BindableEvents:WaitForChild("ForDamageShow")
+local DamageRemote, FznRemote
+task.spawn(function()
+    local reStorage = game:GetService("ReplicatedStorage")
+    local bEvents = reStorage:WaitForChild("_BindableEvents", 10)
+    if bEvents then
+        FznRemote = bEvents:WaitForChild("Fzn", 5)
+        DamageRemote = bEvents:WaitForChild("ForDamageShow", 5)
+    end
+end)
 
--- 1. Botón KILL
 createButton("KILL", Color3.fromRGB(180, 40, 40), function(target)
-    if target and target.Character and target.Character:FindFirstChild("Humanoid") then
+    if DamageRemote and target and target.Character and target.Character:FindFirstChild("Humanoid") then
         DamageRemote:FireServer(target.Character.Humanoid, math.huge)
     end
 end)
 
--- 2. Botón HK (Hakai usando el remoto Fzn)
 createButton("HK (Hakai)", Color3.fromRGB(120, 40, 160), function(target)
-    if target then
+    if FznRemote and target then
         FznRemote:FireServer(target)
     end
 end)
 
--- 3. Botón KILLER (Activa/Desactiva matar a los que se acerquen)
 local killerActive = false
 createButton("KILLER (Tog)", Color3.fromRGB(200, 100, 0), function()
     killerActive = not killerActive
-    if killerActive then
+    if killerActive and DamageRemote then
         task.spawn(function()
             while killerActive do
                 task.wait(0.3)
@@ -116,10 +132,11 @@ createButton("KILLER (Tog)", Color3.fromRGB(200, 100, 0), function()
     end
 end)
 
--- 4. Botón PERMGOD
 createButton("PERMGOD", Color3.fromRGB(40, 150, 40), function()
     local lp = game.Players.LocalPlayer
-    FznRemote:FireServer(lp, true)
+    if FznRemote then
+        FznRemote:FireServer(lp, true)
+    end
     if lp.Character and lp.Character:FindFirstChild("Humanoid") then
         lp.Character.Humanoid.MaxHealth = math.huge
         lp.Character.Humanoid.Health = math.huge
